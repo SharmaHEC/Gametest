@@ -410,9 +410,9 @@
     <!-- Choose horse -->
     <div id="screen-choose" class="screen">
       <h3>Choose your horse</h3>
-      <p>Click on a horse to select it, then click on confirm to start the race.</p>
+      <p>Click on a horse to select it, then click on "Confirm Choice" to start the race.</p>
       <div id="horse-choices"></div>
-      <button id="btn-choose-confirm" class="primary" disabled>Confirm choice</button>
+      <button id="btn-choose-confirm" class="primary" disabled>Confirm Choice</button>
     </div>
 
     <!-- Race screen -->
@@ -431,7 +431,7 @@
 
       <div id="cheer-panel">
         <div id="stamina-line">
-          <span><strong>Cheer energy</strong></span>
+          <span><strong>Cheer Energy</strong></span>
           <span id="stamina-text">100%</span>
         </div>
         <div class="bar"><div id="stamina-fill"></div></div>
@@ -455,7 +455,7 @@
         </p>
 
         <div class="rating-item">
-          <div>How boring did you find this task overall? 1 (Not at all) to 7 (Extremely) </div>
+          <div>By the end of you partcipation in this game, to what extent did you feel bored? 1 (Not at all) to 7 (Extremely) </div>
           <div class="rating-scale" id="rating-boredom">
             <!-- 1–7 radio buttons -->
             <label><input type="radio" name="boredom" value="1"> 1 </label>
@@ -469,7 +469,7 @@
         </div>
 
         <div class="rating-item">
-          <div>To what extent did you feel that you missed out something? 1 (Not at all) to 7 (Extremely)  </div>
+          <div>By the end of you partcipation in this game, to what extent did you feel you were missing out on something? 1 (Not at all) to 7 (Extremely)  </div>
           <div class="rating-scale" id="rating-fomo">
             <label><input type="radio" name="fomo_rating" value="1"> 1 </label>
             <label><input type="radio" name="fomo_rating" value="2"> 2</label>
@@ -511,7 +511,7 @@ function updateBonusBanner() {
   if (conditionHasLottery()) {
     banner.style.display = "block";
     banner.textContent =
-      "iPad lottery: You may qualify to participate if you win!!";
+      "iPad lottery: You would qualify to participate if you win!!";
   } else {
     banner.style.display = "none";
   }
@@ -1348,7 +1348,7 @@ if (CONDITION.FOMO) {
           }
         } else {
           endMsgEl.textContent =
-            "This part of the task is complete. The next task will begin shortly.";
+            "You participation in the game is now over";
         }
       }
 
@@ -1418,6 +1418,7 @@ if (CONDITION.FOMO) {
   </script>
 </body>
 </html>
+
 
 
 
