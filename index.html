@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Horse Race Game Prototype</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+    #game-root { max-width: 800px; margin: 0 auto; padding: 12px; }
+
+    #bonus-banner {
+      background: #fde68a;
+      color: #111827;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      margin: 0 0 8px 0;
+      border: 1px solid #f59e0b;
+    }
+
+    .screen {
+      display: none;
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+    .screen.active { display: block; }
+    h1, h2, h3, p { margin: 0 0 12px; }
+#screen-race {
+  display: none;
+}
+#screen-race.screen.active {
+  display: block;
+}
+
+    button {
+      padding: 10px 16px;
+      border-radius: 6px;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 4px 0;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    button.primary { background: #2563eb; color: #fff; }
+    button.secondary { background: #e5e7eb; color: #111827; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    /* Boost button pulse animation */
+    #boost-btn.pulse { animation: pulseBoost 0.35s ease-out; }
+    @keyframes pulseBoost {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    #horse-choices {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .horse-choice {
+      flex: 1 1 calc(50% - 8px);
+      min-width: 120px;
+      padding: 10px;
+      background: #e5e7eb;
+      border-radius: 8px;
+      text-align: center;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .horse-choice.selected { background: #2563eb; color: #fff; }
+
+    /* Race track */
+    #race-track {
+      position: relative;
+      margin-top: 8px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #d1d5db;
+      padding: 8px 0;
+      height: 260px;
+    }
+
+    /* Non-boring background and speed lines */
+    #race-track.exciting-mode {
+      background: linear-gradient(120deg, #020617 0%, #0f172a 40%, #020617 100%);
+    }
+    #race-track.exciting-mode::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        to right,
+        rgba(148, 163, 184, 0.18) 0px,
+        rgba(148, 163, 184, 0.18) 2px,
+        transparent 2px,
+        transparent 8px
+      );
+      mix-blend-mode: screen;
+      opacity: 0.6;
+      animation: speedlines 1.6s linear infinite;
+    }
+    @keyframes speedlines {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-40px); }
+    }
+
+    .lane {
+      position: relative;
+      height: 56px;
+      margin: 6px 0;
+      background: #f9fafb;
+      border-radius: 28px;
+      overflow: hidden;
+    }
+    .lane:nth-child(odd) { background: #e5e7eb; }
+    .lane.exciting-lane {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.5);
+    }
+    .lane.exciting-lane:nth-child(odd) { background: rgba(17, 24, 39, 0.9); }
+
+    .lane-label {
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 11px;
+      opacity: 0.8;
+      color: #111827;
+      max-width: 45%;
+      line-height: 1.1;
+    }
+    #race-track.exciting-mode .lane-label { color: #e5e7eb; opacity: 0.95; }
+
+    .horse {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 60px;
+      height: 30px;
+      border-radius: 6px;
+      background: #f97316;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: #fff;
+      cursor: default;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.12s;
+    }
+    .horse.chosen { background: #22c55e; }
+
+    /* Non-boring style: circular emoji horse facing right & bobbing, with glow */
+    .horse.exciting {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      font-size: 26px;
+      background: #f97316;
+      animation: bob 0.6s infinite alternate, glow 1.2s infinite alternate;
+      box-shadow: 0 0 8px rgba(250, 204, 21, 0.7);
+    }
+    .horse.exciting.chosen {
+      background: #22c55e;
+      box-shadow: 0 0 14px rgba(34, 197, 94, 0.95);
+    }
+
+
+.horse-trail {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 18px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 0% 50%, rgba(59,130,246,0.9), transparent 65%);
+  opacity: 0.0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  transition: opacity 0.15s ease-out;
+}
+
+.horse-trail.visible {
+  opacity: 0.7;
+}
+
+    /* Surge feedback on cheer (chosen horse only) */
+    .horse.surge {
+      transform: translateY(-50%) scale(1.18);
+  box-shadow: 0 0 22px rgba(59, 130, 246, 0.95);
+    }
+
+    @keyframes bob {
+      from { transform: translateY(-50%) translateY(-3px) scaleX(-1); }
+      to   { transform: translateY(-50%) translateY(3px) scaleX(-1); }
+    }
+    @keyframes glow {
+      from { box-shadow: 0 0 5px rgba(250, 204, 21, 0.5); }
+      to   { box-shadow: 0 0 14px rgba(250, 204, 21, 0.95); }
+    }
+
+    .finish-line {
+      position: absolute;
+      right: 4px;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      background-image: linear-gradient(
+        45deg,
+        #4b5563 25%,
+        transparent 25%,
+        transparent 50%,
+        #4b5563 50%,
+        #4b5563 75%,
+        transparent 75%,
+        transparent
+      );
+      background-size: 6px 6px;
+      opacity: 0.75;
+    }
+    #race-track.exciting-mode .finish-line {
+      background-image: linear-gradient(
+        45deg,
+        #e5e7eb 25%,
+        transparent 25%,
+        transparent 50%,
+        #e5e7eb 50%,
+        #e5e7eb 75%,
+        transparent 75%,
+        transparent
+      );
+      opacity: 0.9;
+    }
+
+    #fomo-overlay {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 16px;
+      font-size: 16px;
+      white-space: pre-line;
+      z-index: 10;
+    }
+    #fomo-overlay.hidden { display: none; }
+
+    #status-feed {
+      margin-top: 10px;
+      font-size: 13px;
+      min-height: 18px;
+      color: #374151;
+    }
+    #status-feed.exciting-feed { color: #111827; }
+    .status-msg { display: inline-block; animation: statusPop 0.45s ease-out; }
+    @keyframes statusPop {
+      0%   { transform: translateY(6px); opacity: 0; }
+      50%  { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+
+    #log-output {
+      width: 100%;
+      height: 200px;
+      margin-top: 8px;
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+    }
+    .tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 11px;
+      margin-right: 4px;
+      margin-bottom: 4px;
+      background: #e5e7eb;
+    }
+    .tag.on { background: #22c55e; color: #fff; }
+    .meta-line { font-size: 12px; margin-bottom: 4px; }
+    .cond-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    /* Stamina bar (cheer realism) */
+    #cheer-panel {
+      margin-top: 10px;
+      background: #f3f4f6;
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .bar {
+      width: 100%;
+      height: 10px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .bar > div {
+      height: 100%;
+      width: 100%;
+      background: #22c55e;
+      transition: width 0.15s linear;
+    }
+    #stamina-line {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      opacity: 0.8;
+    }
+    #audio-note {
+      font-size: 12px;
+      opacity: 0.75;
+      margin-top: 6px;
+    }
+
+    /* Simple end-of-task rating layout */
+    #ratings-block {
+      margin-top: 12px;
+      padding: 10px;
+      background: #f3f4f6;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .rating-item {
+      margin-bottom: 10px;
+    }
+    .rating-scale {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .rating-scale label {
+      font-size: 12px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="game-root">
+    <!-- Condition selection -->
+<div id="screen-condselect" class="screen active">
+  <h2>Virtual Horse Race</h2>
+  <p>
+    This is a short virtual horse race with four horses.
+  </p>
+<p id="pid-line" style="display:none;"></p>
+  <p style="font-size:13px;opacity:0.8;">
+    Please select one of the below conditions.
+  </p>
+  <div class="cond-grid">
+    <button class="secondary" data-cond="fomo_exc">FoMO + Non-boring</button>
+    <button class="secondary" data-cond="fomo_bor">FoMO + Boring</button>
+    <button class="secondary" data-cond="nofomo_bor">Non-FoMO + Boring</button>
+    <button class="secondary" data-cond="nofomo_exc">Non-FoMO + Non-boring</button>
+  </div>
+</div>
+
+
+    <!-- Instructions -->
+   <div id="screen-intro" class="screen">
+  <h2>Virtual Horse Race</h2>
+  <p>
+    In this game, you will take part in a virtual horse race with four horses.
+    Your role is to select one horse and then watch the race unfold.
+  </p>
+  <p><strong>Please follow these steps:</strong></p>
+  <ol>
+    <li>Choose one horse to back in the race.</li>
+    <li>After you confirm your choice, the race will start automatically.</li>
+    <li>Once the race begins, you cannot change your chosen horse.</li>
+  </ol>
+  <p id="cheer-instructions">
+     During the race you will see a button labeled <strong>“Cheer your horse”</strong>.
+  Each press spends some of your limited <strong>cheer energy</strong> to give your horse
+  a short boost. Your cheer energy bar refills gradually between presses, which
+  limits how often you can cheer. Remember, other players also have a similar option.
+  </p>
+<p id="bonus-instructions">
+  <!-- This text will be filled in by the script depending on the condition. -->
+</p>
+  <button id="btn-intro-continue" class="primary">Continue</button>
+</div>
+
+
+    <!-- Choose horse -->
+    <div id="screen-choose" class="screen">
+      <h3>Choose your horse</h3>
+      <p>Click on a horse to select it, then click on confirm to start the race.</p>
+      <div id="horse-choices"></div>
+      <button id="btn-choose-confirm" class="primary" disabled>Confirm choice</button>
+    </div>
+
+    <!-- Race screen -->
+    	<div id="screen-race" class="screen">
+  <div id="bonus-banner"></div>
+      <div id="race-container" style="position:relative;">
+        <div id="race-track">
+          <div class="finish-line"></div>
+        </div>
+        <div id="fomo-overlay" class="hidden"></div>
+      </div>
+
+      <button id="boost-btn" class="primary" style="margin-top:8px;">
+        Cheer your horse
+      </button>
+
+      <div id="cheer-panel">
+        <div id="stamina-line">
+          <span><strong>Cheer energy</strong></span>
+          <span id="stamina-text">100%</span>
+        </div>
+        <div class="bar"><div id="stamina-fill"></div></div>
+        <div id="audio-note"></div>
+      </div>
+
+      <div id="status-feed"></div>
+    </div>
+
+    <!-- End screen -->
+    <div id="screen-end" class="screen">
+      <h3>Thank you</h3>
+      <p id="end-message-main">
+        
+      </p>
+
+      <!-- NEW: subjective ratings block -->
+      <div id="ratings-block">
+        <p style="margin-bottom:8px;">
+          Please answer below questions about your experience in this game. Also, please update the google sheet accordingly.
+        </p>
+
+        <div class="rating-item">
+          <div>How boring did you find this task overall? 1 (Not at all) to 7 (Extremely) </div>
+          <div class="rating-scale" id="rating-boredom">
+            <!-- 1–7 radio buttons -->
+            <label><input type="radio" name="boredom" value="1"> 1 </label>
+            <label><input type="radio" name="boredom" value="2"> 2</label>
+            <label><input type="radio" name="boredom" value="3"> 3</label>
+            <label><input type="radio" name="boredom" value="4"> 4</label>
+            <label><input type="radio" name="boredom" value="5"> 5</label>
+            <label><input type="radio" name="boredom" value="6"> 6</label>
+            <label><input type="radio" name="boredom" value="7"> 7 </label>
+          </div>
+        </div>
+
+        <div class="rating-item">
+          <div>To what extent did you feel that you missed out something? 1 (Not at all) to 7 (Extremely)  </div>
+          <div class="rating-scale" id="rating-fomo">
+            <label><input type="radio" name="fomo_rating" value="1"> 1 </label>
+            <label><input type="radio" name="fomo_rating" value="2"> 2</label>
+            <label><input type="radio" name="fomo_rating" value="3"> 3</label>
+            <label><input type="radio" name="fomo_rating" value="4"> 4</label>
+            <label><input type="radio" name="fomo_rating" value="5"> 5</label>
+            <label><input type="radio" name="fomo_rating" value="6"> 6</label>
+            <label><input type="radio" name="fomo_rating" value="7"> 7 </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /***********************
+     * PARAMS & CONDITION  *
+     ***********************/
+    function getParticipantId() {
+      var sp = new URLSearchParams(window.location.search);
+      return sp.get("pid") || null;
+    }
+
+    var CONDITION = {
+      participantId: getParticipantId(),
+      FOMO: null,
+      EXCITING: null  // EXCITING = Non-boring, so Boredom = !EXCITING
+    };
+
+function conditionHasLottery() {
+  // Lottery in all three conditions except Non-FoMO + Boring
+  return !(CONDITION.FOMO === false && CONDITION.EXCITING === false);
+}
+
+function updateBonusBanner() {
+  var banner = document.getElementById("bonus-banner");
+  if (!banner) return;
+
+  if (conditionHasLottery()) {
+    banner.style.display = "block";
+    banner.textContent =
+      "iPad lottery: You may qualify to participate if you win!!";
+  } else {
+    banner.style.display = "none";
+  }
+}
+
+
+    /***********************
+     * SIMPLE LOGGER       *
+     ***********************/
+    var logEvents = [];
+    var t0 = null;
+    var sessionEnded = false;
+
+    function logEvent(type, data) {
+      if (sessionEnded) return;
+      if (!t0) t0 = performance.now();
+      var now = performance.now();
+      var entry = { type: type, t_rel_ms: Math.round(now - t0), ts_wall: Date.now() };
+      if (data) {
+        for (var k in data) {
+          if (Object.prototype.hasOwnProperty.call(data, k)) entry[k] = data[k];
+        }
+      }
+      logEvents.push(entry);
+    }
+
+    /***********************
+     * DOM HELPERS         *
+     ***********************/
+    var screens = {
+      condselect: document.getElementById("screen-condselect"),
+      intro: document.getElementById("screen-intro"),
+      choose: document.getElementById("screen-choose"),
+      race: document.getElementById("screen-race"),
+      end: document.getElementById("screen-end")
+    };
+
+    function showScreen(name) {
+      for (var key in screens) {
+        if (!Object.prototype.hasOwnProperty.call(screens, key)) continue;
+        screens[key].classList.remove("active");
+      }
+      screens[name].classList.add("active");
+    }
+    function el(id) { return document.getElementById(id); }
+
+    /***********************
+     * AUDIO (EXCITING)    *
+     ***********************/
+    var audio = {
+      ctx: null,
+      master: null,
+      crowdOsc: null,
+      crowdNoise: null,
+      crowdGain: null,
+      started: false
+    };
+
+    function ensureAudioContext() {
+      if (audio.ctx) return;
+      try {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        audio.ctx = new AC();
+        audio.master = audio.ctx.createGain();
+        audio.master.gain.value = 0.22;
+        audio.master.connect(audio.ctx.destination);
+      } catch (e) {
+        audio.ctx = null;
+      }
+    }
+
+    function startExcitingAmbience() {
+      if (!CONDITION.EXCITING) return;
+      ensureAudioContext();
+      if (!audio.ctx || audio.started) return;
+
+      if (audio.ctx.state === "suspended") {
+        audio.ctx.resume().catch(function(){});
+      }
+
+      var bufferSize = 2 * audio.ctx.sampleRate;
+      var noiseBuffer = audio.ctx.createBuffer(1, bufferSize, audio.ctx.sampleRate);
+      var output = noiseBuffer.getChannelData(0);
+      for (var i = 0; i < bufferSize; i++) {
+        output[i] = (Math.random() * 2 - 1) * 0.25;
+      }
+      var noise = audio.ctx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      noise.loop = true;
+
+      var noiseFilter = audio.ctx.createBiquadFilter();
+      noiseFilter.type = "bandpass";
+      noiseFilter.frequency.value = 900;
+      noiseFilter.Q.value = 0.7;
+
+      var noiseGain = audio.ctx.createGain();
+      noiseGain.gain.value = 0.25;
+
+      var osc = audio.ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = 88;
+
+      var oscGain = audio.ctx.createGain();
+      oscGain.gain.value = 0.08;
+
+      var lfo = audio.ctx.createOscillator();
+      lfo.type = "sine";
+      lfo.frequency.value = 0.18;
+      var lfoGain = audio.ctx.createGain();
+      lfoGain.gain.value = 0.10;
+
+      lfo.connect(lfoGain);
+      lfoGain.connect(noiseGain.gain);
+
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(audio.master);
+
+      osc.connect(oscGain);
+      oscGain.connect(audio.master);
+
+      audio.crowdNoise = noise;
+      audio.crowdOsc = osc;
+      audio.crowdGain = noiseGain;
+
+      noise.start();
+      osc.start();
+      lfo.start();
+
+      audio.started = true;
+      logEvent("audio_ambience_start");
+    }
+
+    function stopAllAudio() {
+      if (!audio.ctx) return;
+      try {
+        if (audio.crowdNoise) audio.crowdNoise.stop();
+        if (audio.crowdOsc) audio.crowdOsc.stop();
+      } catch (e) {}
+      audio.crowdNoise = null;
+      audio.crowdOsc = null;
+      audio.started = false;
+      logEvent("audio_stop");
+    }
+
+    function playCheerSfx(intensity01) {
+      if (!CONDITION.EXCITING) return;
+      ensureAudioContext();
+      if (!audio.ctx) return;
+
+      if (audio.ctx.state === "suspended") {
+        audio.ctx.resume().catch(function(){});
+      }
+
+      var now = audio.ctx.currentTime;
+      var o = audio.ctx.createOscillator();
+      var g = audio.ctx.createGain();
+      o.type = "triangle";
+      o.frequency.setValueAtTime(420 + 280 * intensity01, now);
+      o.frequency.exponentialRampToValueAtTime(180 + 120 * intensity01, now + 0.18);
+
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(0.22 + 0.18 * intensity01, now + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.20);
+
+      o.connect(g);
+      g.connect(audio.master);
+
+      o.start(now);
+      o.stop(now + 0.22);
+    }
+
+    /***********************
+     * GAME STATE          *
+     ***********************/
+    var horseChosen = null;
+    var horses = [];         // {id, laneIndex, pos, el, speed, actorLabel}
+    var raceInterval = null;
+    var interruptTimeout = null;
+    var raceEndTimeout = null;
+    var raceEnded = false;
+    var raceStartPerfTime = null;
+
+    var RACE_TOTAL_MS = null;
+    var FOMO_INTERRUPT_MS = null;
+
+    var lastLeaderUpdateTime = 0;
+    var LEADER_UPDATE_INTERVAL_MS = 2000;
+
+    var cheer = {
+      stamina: 1.0,
+      staminaRegenPerSec: 0.055,
+      useCost: 0.14,
+      cooldownMs: 600,
+      lastUseMs: -999999,
+      surge: 0.0,
+      surgeDecayPerTick: 0.06
+    };
+
+    function configureCheerForCondition() {
+      if (CONDITION.EXCITING) {
+        cheer.staminaRegenPerSec = 0.055;
+        cheer.cooldownMs = 600;
+      } else {
+        cheer.staminaRegenPerSec = 0.02; // slower regen in boring condition (less rewarding)
+        cheer.cooldownMs = 1000;         // longer cooldown in boring condition
+      }
+    }
+
+    function updateStaminaUI() {
+      var pct = Math.round(cheer.stamina * 100);
+      var t = el("stamina-text");
+      var f = el("stamina-fill");
+      if (t) t.textContent = pct + "%";
+      if (f) f.style.width = pct + "%";
+    }
+
+    /***********************
+     * CONDITION SELECTION *
+     ***********************/
+  function setupConditionSelection() {
+  var pidLine = el("pid-line");
+  pidLine.textContent = CONDITION.participantId
+    ? ("Participant ID: " + CONDITION.participantId)
+    : "Participant ID: (none provided in URL)";
+
+  var btns = screens.condselect.querySelectorAll("button[data-cond]");
+  btns.forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      var code = btn.getAttribute("data-cond");
+      if (code === "fomo_exc") {
+        CONDITION.FOMO = true;
+        CONDITION.EXCITING = true;
+      } else if (code === "fomo_bor") {
+        CONDITION.FOMO = true;
+        CONDITION.EXCITING = false;
+      } else if (code === "nofomo_bor") {
+        CONDITION.FOMO = false;
+        CONDITION.EXCITING = false;
+      } else if (code === "nofomo_exc") {
+        CONDITION.FOMO = false;
+        CONDITION.EXCITING = true;
+      }
+      logEvent("condition_selected", { FOMO: CONDITION.FOMO, EXCITING: CONDITION.EXCITING });
+
+      var bonusInstr = el("bonus-instructions");
+      if (bonusInstr) {
+        if (CONDITION.FOMO || CONDITION.EXCITING) {
+          bonusInstr.textContent =
+            "In addition, if you win this race, you would qualify to take part " +
+            "in a lottery in which the winner receives an iPad."
+        } else {
+          bonusInstr.textContent = "";
+        }
+      }
+
+      // show/hide cheer instructions (existing code)
+      var cheerInstr = el("cheer-instructions");
+      if (cheerInstr) {
+        cheerInstr.style.display = CONDITION.EXCITING ? "block" : "none";
+      }
+
+      showScreen("intro");
+    });
+  });
+}
+
+
+    /***********************
+     * INITIAL UI SETUP    *
+     ***********************/
+    function initUIConditionTags() {
+      var fTag = el("tag-fomo");
+      var eTag = el("tag-exc");
+
+      var fomoYes = CONDITION.FOMO === true;
+      var boredomYes = CONDITION.EXCITING === false;
+
+ // Only update tags if they exist (for debugging versions)
+  if (fTag && eTag) {
+    fTag.textContent = "FoMO: " + (fomoYes ? "Yes" : "No");
+    eTag.textContent = "Boredom: " + (boredomYes ? "Yes" : "No");
+
+    fTag.classList.toggle("on", fomoYes);
+    eTag.classList.toggle("on", boredomYes);
+  }
+
+  // Keep using the audio-note
+
+      var note = el("audio-note");
+      if (note) {
+        if (CONDITION.EXCITING) {
+          note.textContent = "  ";
+        } else {
+          note.textContent = "  ";
+        }
+      }
+    }
+
+    function setupIntro() {
+      el("btn-intro-continue").addEventListener("click", function() {
+        logEvent("instructions_ok");
+        showScreen("choose");
+      });
+    }
+
+    function setupHorseChoice() {
+      var container = el("horse-choices");
+      var confirmBtn = el("btn-choose-confirm");
+      container.innerHTML = "";
+      horseChosen = null;
+      confirmBtn.disabled = true;
+
+      for (var i = 1; i <= 4; i++) {
+        (function(hid) {
+          var div = document.createElement("div");
+          div.className = "horse-choice";
+          div.textContent = "Horse " + hid;
+          div.dataset.horseId = String(hid);
+          div.addEventListener("click", function() {
+            var all = container.querySelectorAll(".horse-choice");
+            for (var j = 0; j < all.length; j++) all[j].classList.remove("selected");
+            div.classList.add("selected");
+            horseChosen = hid;
+            logEvent("horse_choice_click", { horse: hid });
+            confirmBtn.disabled = false;
+          });
+          container.appendChild(div);
+        })(i);
+      }
+
+      confirmBtn.addEventListener("click", function() {
+        if (!horseChosen) return;
+        logEvent("horse_chosen", { horse: horseChosen });
+
+        startExcitingAmbience();
+
+        if (CONDITION.FOMO) startFomoRace();
+        else startNonFomoRace();
+      });
+    }
+
+    /***********************
+     * BOOST (CHEER)       *
+     ***********************/
+    function resetCheerState() {
+      cheer.stamina = 1.0;
+      cheer.surge = 0.0;
+      cheer.lastUseMs = -999999;
+      configureCheerForCondition(); // NEW: adapt to condition
+      updateStaminaUI();
+    }
+
+    function setupBoostButton() {
+      var btn = el("boost-btn");
+      if (!btn) return;
+
+      resetCheerState();
+      btn.disabled = false;
+      btn.classList.remove("pulse");
+
+      btn.onpointerdown = function(ev) {
+        ev.preventDefault();
+
+        startExcitingAmbience();
+
+        var nowMs = performance.now();
+        if (nowMs - cheer.lastUseMs < cheer.cooldownMs) {
+          logEvent("cheer_blocked_cooldown", { dtMs: Math.round(nowMs - cheer.lastUseMs) });
+          return;
+        }
+        if (cheer.stamina < cheer.useCost) {
+          logEvent("cheer_blocked_no_stamina", { stamina: cheer.stamina });
+          return;
+        }
+
+        cheer.lastUseMs = nowMs;
+        cheer.stamina = Math.max(0, cheer.stamina - cheer.useCost);
+        cheer.surge = Math.min(1.0, cheer.surge + 0.55);
+
+        btn.classList.remove("pulse");
+        void btn.offsetWidth;
+        btn.classList.add("pulse");
+
+        var chosen = horses.find(function(h) { return h.id === horseChosen; });
+if (chosen && chosen.el) {
+  chosen.el.classList.add("surge");
+
+  // Create a short trail behind the chosen horse (visual only)
+  var trail = document.createElement("div");
+  trail.className = "horse-trail";
+  var laneEl = chosen.el.parentElement;
+  if (laneEl) {
+    laneEl.appendChild(trail);
+    // Position trail slightly behind the horse
+    var leftPct = chosen.pos - 4;
+    if (leftPct < 0) leftPct = 0;
+    trail.style.left = leftPct + "%";
+    // Show, then fade/remove
+    requestAnimationFrame(function() {
+      trail.classList.add("visible");
+    });
+    setTimeout(function() {
+      trail.classList.remove("visible");
+      setTimeout(function() {
+        if (trail.parentElement) trail.parentElement.removeChild(trail);
+      }, 160);
+    }, 160);
+  }
+
+  setTimeout(function() {
+    if (chosen && chosen.el) chosen.el.classList.remove("surge");
+  }, 180);
+}
+
+
+        updateStaminaUI();
+
+        var intensity01 = Math.max(0.15, Math.min(1.0, cheer.surge));
+        playCheerSfx(intensity01);
+
+        logEvent("cheer_use", {
+          stamina: +cheer.stamina.toFixed(3),
+          surge: +cheer.surge.toFixed(3)
+        });
+      };
+    }
+
+    /***********************
+     * NON-FOMO FLOW       *
+     ***********************/
+    function startNonFomoRace() {
+  if (CONDITION.EXCITING) {
+    RACE_TOTAL_MS = 240 * 1000;   // ~4 min
+  } else {
+    RACE_TOTAL_MS = 240 * 1000;  // ~4 min (boredom)
+  }
+  FOMO_INTERRUPT_MS = null;
+
+  showScreen("race");
+  initUIConditionTags();
+  updateBonusBanner();
+  setupRaceTrack();
+
+  // NEW: show/hide cheer UI by condition
+  var boostBtn = el("boost-btn");
+  var cheerPanel = el("cheer-panel");
+  if (CONDITION.EXCITING) {
+    if (boostBtn) boostBtn.style.display = "inline-block";
+    if (cheerPanel) cheerPanel.style.display = "block";
+    setupBoostButton();
+  } else {
+    if (boostBtn) boostBtn.style.display = "none";
+    if (cheerPanel) cheerPanel.style.display = "none";
+  }
+
+  logEvent("nonfomo_race_start");
+  startRaceAnimation();
+
+  raceEndTimeout = setTimeout(function() {
+    if (!raceEnded) endRace("time_up");
+  }, RACE_TOTAL_MS + 2000);
+}
+
+
+    /***********************
+     * FOMO FLOW           *
+     ***********************/
+    function startFomoRace() {
+  if (CONDITION.EXCITING) {
+    RACE_TOTAL_MS = 240 * 1000;
+    FOMO_INTERRUPT_MS = 180 * 1000;
+  } else {
+    RACE_TOTAL_MS = 240 * 1000;
+    FOMO_INTERRUPT_MS = 180 * 1000;
+  }
+
+  showScreen("race");
+  initUIConditionTags();
+  updateBonusBanner();
+  setupRaceTrack();
+
+  // NEW: show/hide cheer UI by condition
+  var boostBtn = el("boost-btn");
+  var cheerPanel = el("cheer-panel");
+  if (CONDITION.EXCITING) {
+    if (boostBtn) boostBtn.style.display = "inline-block";
+    if (cheerPanel) cheerPanel.style.display = "block";
+    setupBoostButton();
+  } else {
+    if (boostBtn) boostBtn.style.display = "none";
+    if (cheerPanel) cheerPanel.style.display = "none";
+  }
+
+  logEvent("fomo_race_start");
+  startRaceAnimation();
+
+  interruptTimeout = setTimeout(function() {
+    triggerFomoInterrupt();
+  }, FOMO_INTERRUPT_MS);
+
+  raceEndTimeout = setTimeout(function() {
+    if (!raceEnded) endRace("time_up");
+  }, RACE_TOTAL_MS + 2000);
+}
+
+
+    /***********************
+     * RACE TRACK & MOTION *
+     ***********************/
+    function setupRaceTrack() {
+      var track = el("race-track");
+      var finish = track.querySelector(".finish-line");
+      track.innerHTML = "";
+      if (finish) track.appendChild(finish);
+
+      var isExc = CONDITION.EXCITING;
+      if (isExc) track.classList.add("exciting-mode");
+      else track.classList.remove("exciting-mode");
+
+      horses = [];
+      var otherNames = ["Player A", "Player B", "Player C"];
+      var otherIdx = 0;
+
+      for (var i = 0; i < 4; i++) {
+        var lane = document.createElement("div");
+        lane.className = "lane";
+        if (isExc) lane.classList.add("exciting-lane");
+
+        var horseId = i + 1;
+
+        var label = document.createElement("div");
+        label.className = "lane-label";
+
+        var actorLabel;
+        if (horseId === horseChosen) {
+          actorLabel = "You";
+          label.textContent = "You - Horse " + horseId;
+        } else {
+          var nm = otherNames[otherIdx] || ("Player " + (otherIdx + 1));
+          otherIdx++;
+          actorLabel = nm;
+          label.textContent = nm + " - Horse " + horseId;
+        }
+        lane.appendChild(label);
+
+var horse = document.createElement("div");
+horse.className = "horse";
+horse.classList.add("exciting");   // always use circular emoji style
+horse.textContent = "🐎";
+
+if (horseId === horseChosen) horse.classList.add("chosen");
+
+        horse.style.left = "4%";
+        lane.appendChild(horse);
+        track.appendChild(lane);
+
+        var baseSpeed = 1;
+        var speed;
+        if (horseId === horseChosen) speed = baseSpeed + (isExc ? 0.10 : 0.05);
+        else {
+          var variance = isExc ? 0.30 : 0.10; // slightly smaller var in boring
+          speed = baseSpeed + (Math.random() - 0.5) * variance;
+        }
+
+        horses.push({ id: horseId, laneIndex: i, pos: 4, el: horse, speed: speed, actorLabel: actorLabel });
+      }
+
+      var nonChosen = horses.filter(function(h) { return h.id !== horseChosen; });
+      if (nonChosen.length > 0) {
+        var trailingHorse = nonChosen[Math.floor(Math.random() * nonChosen.length)];
+        trailingHorse.speed *= 0.85;
+      }
+
+      var feed = el("status-feed");
+      feed.textContent = "";
+      feed.classList.toggle("exciting-feed", CONDITION.EXCITING);
+      lastLeaderUpdateTime = 0;
+
+      // NEW: static low-information message in boring condition
+      if (!CONDITION.EXCITING) {
+        feed.textContent = " ";
+      }
+
+      updateStaminaUI();
+    }
+
+    function startRaceAnimation() {
+      raceStartPerfTime = performance.now();
+      var stepInterval = CONDITION.EXCITING ? 250 : 1200; // CHANGED: slower boring updates
+
+      raceInterval = setInterval(function() {
+        if (raceEnded) {
+          clearInterval(raceInterval);
+          raceInterval = null;
+          return;
+        }
+
+        var now = performance.now();
+        var elapsed = now - raceStartPerfTime;
+        if (elapsed < 0) elapsed = 0;
+        if (RACE_TOTAL_MS === null) return;
+
+        var baseFracRaw = Math.min(elapsed / RACE_TOTAL_MS, 1);
+        var baseFrac = baseFracRaw;
+
+        if (!CONDITION.EXCITING) baseFrac = Math.pow(baseFracRaw, 2.0); // even more sluggish boring progress
+
+// Extra boring-condition lead curve for the chosen horse
+var chosen = horses.find(function(h) { return h.id === horseChosen; });
+if (!CONDITION.EXCITING && chosen) {
+  // We want: from t=100s to t=130s lead increases, from 130s to 150s it decreases.
+  var t = elapsed; // ms since race start
+
+  var leadBoost = 0; // in percentage points of track (0–100)
+
+  if (t >= 100000 && t < 130000) {
+    // 100–130s: ramp up lead from 0 to ~2 percentage points
+    var phaseFracUp = (t - 100000) / 30000;    // 0 → 1 over 30s
+    leadBoost = 4.0 * phaseFracUp;             // 0 → 2
+  } else if (t >= 130000 && t < 150000) {
+    // 130–150s: ramp down from ~2 back to 0
+    var phaseFracDown = (t - 130000) / 20000;  // 0 → 1 over 20s
+    leadBoost = 3.0 * (1 - phaseFracDown);     // 2 → 0
+  }
+
+  if (leadBoost > 0) {
+    chosen.pos = Math.min(96, chosen.pos + leadBoost);
+  }
+}
+
+
+        var varScale = CONDITION.EXCITING ? 1.0 : 0.04; // tiny variance in boring
+        var midShape = baseFrac * (1 - baseFrac);
+
+        var dtSec = (CONDITION.EXCITING ? 0.25 : 1.2);
+        cheer.stamina = Math.min(1.0, cheer.stamina + cheer.staminaRegenPerSec * dtSec);
+        updateStaminaUI();
+
+        if (cheer.surge > 0) cheer.surge = Math.max(0, cheer.surge - cheer.surgeDecayPerTick);
+
+        // 1) Base positions
+        for (var i = 0; i < horses.length; i++) {
+          var h = horses[i];
+          var offset = (h.speed - 1) * varScale * midShape;
+          var frac = baseFrac + offset;
+          if (frac < 0) frac = 0;
+          if (frac > 1) frac = 1;
+          var pos = 4 + 92 * frac;
+          if (pos > 96) pos = 96;
+          h.pos = pos;
+        }
+
+        // 2) Cheer surge effect (smaller in boring condition)
+        var chosen = horses.find(function(h) { return h.id === horseChosen; });
+        if (chosen) {
+          var cheerEffect = (CONDITION.EXCITING ?  0.80 : 0.15) * cheer.surge;
+          chosen.pos = Math.min(96, chosen.pos + cheerEffect);
+        }
+
+        // 3) Enforce chosen horse rank (1st or 2nd) with narrow margin
+        if (chosen) {
+          var others = horses.filter(function(h) { return h.id !== horseChosen; });
+          others.sort(function(a, b) { return b.pos - a.pos; });
+
+          if (others.length > 0) {
+            var leader = others[0];
+            var second = others.length > 1 ? others[1] : null;
+            var marginLead = 0.5;
+            var marginTrail = 0.4;
+
+            var targetRank;
+            if (CONDITION.EXCITING) {
+              var pLeadBase = 0.3 + 0.7 * baseFracRaw;
+              var pLeadBoost = pLeadBase + 0.06 * cheer.surge;
+              var pLead = Math.min(0.98, pLeadBoost);
+              targetRank = Math.random() < pLead ? 1 : 2;
+            } else {
+              var pLeadBaseBoring = baseFracRaw < 0.6 ? 0.25 : 0.55;
+              var pLeadBoostBoring = pLeadBaseBoring + 0.025 * cheer.surge;
+              var pLeadBoring = Math.min(0.85, pLeadBoostBoring);
+              targetRank = Math.random() < pLeadBoring ? 1 : 2;
+            }
+
+            if (targetRank === 1) {
+              chosen.pos = Math.min(96, leader.pos + marginLead);
+            } else {
+              var targetPos = leader.pos - marginTrail;
+              if (second && targetPos <= second.pos + 0.1) targetPos = second.pos + 0.1;
+              chosen.pos = Math.max(4, Math.min(96, targetPos));
+            }
+          }
+        }
+
+        // 4) Apply positions
+        for (var j = 0; j < horses.length; j++) {
+          horses[j].el.style.left = horses[j].pos + "%";
+        }
+
+        // 5) Leader updates (only in Non-boring)
+        if (CONDITION.EXCITING) {
+          var nowMs = performance.now();
+          if (nowMs - lastLeaderUpdateTime > LEADER_UPDATE_INTERVAL_MS) {
+            lastLeaderUpdateTime = nowMs;
+            var leaderHorse = horses.slice().sort(function(a, b) { return b.pos - a.pos; })[0];
+            if (leaderHorse) {
+              var feed = el("status-feed");
+              var msg;
+              
+if (CONDITION.FOMO) {
+  var actor = leaderHorse.actorLabel || ("Player " + leaderHorse.id);
+  msg = (leaderHorse.id === horseChosen)
+    ? "You are currently leading."
+    : (actor + " is currently leading.");
+} else {
+  msg = "Horse " + leaderHorse.id + " is currently leading.";
+}
+
+
+              feed.innerHTML = '<span class="status-msg">' + msg + '</span>';
+              logEvent("leader_update", {
+                leaderHorse: leaderHorse.id,
+                leaderActor: leaderHorse.actorLabel,
+                message: msg
+              });
+            }
+          }
+        }
+
+        // 6) End race for non-FoMO when finished
+        if (!CONDITION.FOMO && baseFracRaw >= 1 && !raceEnded) {
+          endRace("all_finished");
+        }
+      }, stepInterval);
+    }
+
+    function triggerFomoInterrupt() {
+  if (raceEnded) return;
+
+  var bbtn = el("boost-btn");
+  if (bbtn) {
+    bbtn.disabled = true;
+    bbtn.style.display = "none";        // NEW: hide cheer button
+  }
+
+  // NEW: hide cheer panel and status feed (leader updates)
+  var cheerPanel = el("cheer-panel");
+  if (cheerPanel) cheerPanel.style.display = "none";
+
+  var feed = el("status-feed");
+  if (feed) feed.style.display = "none";
+  
+  var chosen = horses.find(function(h) { return h.id === horseChosen; });
+  if (chosen) {
+    var others = horses.filter(function(h) { return h.id !== horseChosen; });
+    if (others.length > 0) {
+      others.sort(function(a, b) { return b.pos - a.pos; });
+      var topOther = others[0];
+      chosen.pos = Math.max(chosen.pos, topOther.pos + 1.0);
+      chosen.pos = Math.min(96, chosen.pos);
+      chosen.el.style.left = chosen.pos + "%";
+    }
+  }
+
+  var overlay = el("fomo-overlay");
+  if (!overlay) return;
+  overlay.textContent =
+    "We now need you for the next part of the study.\n\n" +
+    "The other players will continue racing to the finish, and any lottery\n" +
+    "entries will be based on the final result.\n\n" +
+    "You will not see which horse wins, but the outcome will still count.";
+  overlay.classList.remove("hidden");
+
+  logEvent("fomo_interrupt");
+
+  if (raceInterval) {
+    clearInterval(raceInterval);
+    raceInterval = null;
+  }
+
+  stopAllAudio();
+
+  setTimeout(function() {
+    if (!raceEnded) endRace("fomo_interrupt");
+  }, 20000);
+}
+
+    function computeWinnerId() {
+      if (!horses || horses.length === 0) return null;
+      if (!CONDITION.FOMO && horseChosen != null) return horseChosen;
+      var best = horses[0];
+      for (var i = 1; i < horses.length; i++) {
+        if (horses[i].pos > best.pos) best = horses[i];
+      }
+      return best ? best.id : null;
+    }
+
+    function getRatingValue(name) {
+      var nodes = document.querySelectorAll('input[name="' + name + '"]');
+      for (var i = 0; i < nodes.length; i++) {
+        if (nodes[i].checked) return nodes[i].value;
+      }
+      return null;
+    }
+
+    function endRace(reason) {
+      if (raceEnded) return;
+      raceEnded = true;
+
+      if (raceInterval) { clearInterval(raceInterval); raceInterval = null; }
+      if (interruptTimeout) { clearTimeout(interruptTimeout); interruptTimeout = null; }
+      if (raceEndTimeout) { clearTimeout(raceEndTimeout); raceEndTimeout = null; }
+
+      var bbtn = el("boost-btn");
+      if (bbtn) bbtn.disabled = true;
+
+      stopAllAudio();
+
+      var winnerId = computeWinnerId();
+      logEvent("race_end", { reason: reason, winner: winnerId });
+
+      var endMsgEl = el("end-message-main");
+      if (endMsgEl) {
+        if (!CONDITION.FOMO && winnerId != null) {
+          if (CONDITION.EXCITING) {
+            // Exciting: highlight winner
+            endMsgEl.innerHTML =
+              '<span style="font-weight:bold;color:#b91c1c;">Horse ' +
+              winnerId + ' is the winner!</span>';
+          } else {
+            // Boring: do not highlight outcome; keep neutral
+            endMsgEl.textContent =
+              "Thank you for playing the game.";
+          }
+        } else {
+          endMsgEl.textContent =
+            "This part of the task is complete. The next task will begin shortly.";
+        }
+      }
+
+      showScreen("end");
+      finishAndExport();
+    }
+
+    /***********************
+     * FINISH & EXPORT     *
+     ***********************/
+    function finishAndExport() {
+      if (sessionEnded) return;
+      sessionEnded = true;
+
+      var boredomRating = getRatingValue("boredom");
+      var fomoRating = getRatingValue("fomo_rating");
+
+      logEvent("session_end", {
+        participantId: CONDITION.participantId,
+        FOMO: CONDITION.FOMO,
+        EXCITING: CONDITION.EXCITING,
+        horseChosen: horseChosen,
+        hasBonus: conditionHasLottery(),
+        boredomRating: boredomRating,
+        fomoRating: fomoRating
+      });
+
+      var payload = {
+        participantId: CONDITION.participantId,
+        FOMO: CONDITION.FOMO,
+        EXCITING: CONDITION.EXCITING,
+        horseChosen: horseChosen,
+        hasBonus: conditionHasLottery(),
+        boredomRating: boredomRating,
+        fomoRating: fomoRating,
+        events: logEvents
+      };
+
+      try {
+        if (typeof window.qualtricsSetData === "function") {
+          window.qualtricsSetData("game_log_json", JSON.stringify(payload));
+          window.qualtricsSetData("fomo", CONDITION.FOMO ? 1 : 0);
+          window.qualtricsSetData("boredom", CONDITION.EXCITING ? 0 : 1);
+          window.qualtricsSetData("hasBonus", conditionHasLottery() ? 1 : 0);
+          window.qualtricsSetData("horseChosen", horseChosen || "");
+          window.qualtricsSetData("boredomRating", boredomRating || "");
+          window.qualtricsSetData("fomoRating", fomoRating || "");
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    /***********************
+     * STARTUP             *
+     ***********************/
+    window.addEventListener("load", function() {
+      logEvent("session_start", { participantId: CONDITION.participantId });
+      setupConditionSelection();
+      setupIntro();
+      setupHorseChoice();
+    });
+
+    document.addEventListener("visibilitychange", function() {
+      logEvent("visibility_change", { state: document.visibilityState });
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
