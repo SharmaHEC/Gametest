@@ -198,6 +198,7 @@
   opacity: 0.7;
 }
 
+
     /* Surge feedback on cheer (chosen horse only) */
     .horse.surge {
       transform: translateY(-50%) scale(1.18);
@@ -1210,6 +1211,47 @@ if (!CONDITION.EXCITING && chosen) {
         for (var j = 0; j < horses.length; j++) {
           horses[j].el.style.left = horses[j].pos + "%";
         }
+
+// 4b) Automatic "crowd cheers" for other horses (Non-boring only)
+if (CONDITION.EXCITING) {
+  // small per-tick chance that someone cheers for a random other horse
+  var crowdCheerChance = 0.10; // tweak 0.05–0.20 as you like
+  if (Math.random() < crowdCheerChance) {
+    var others = horses.filter(function(h) { return h.id !== horseChosen; });
+    if (others.length > 0) {
+      var idx = Math.floor(Math.random() * others.length);
+      var other = others[idx];
+
+      // optional tiny speed boost so it feels real
+      other.pos = Math.min(96, other.pos + 0.10);
+      other.el.style.left = other.pos + "%";
+
+      // create short trail behind this horse (reuse same CSS)
+      var otherTrail = document.createElement("div");
+      otherTrail.className = "horse-trail";
+      var laneEl = other.el.parentElement;
+      if (laneEl) {
+        laneEl.appendChild(otherTrail);
+        var leftPct = other.pos - 4;
+        if (leftPct < 0) leftPct = 0;
+        otherTrail.style.left = leftPct + "%";
+
+        requestAnimationFrame(function() {
+          otherTrail.classList.add("visible");
+        });
+        setTimeout(function() {
+          otherTrail.classList.remove("visible");
+          setTimeout(function() {
+            if (otherTrail.parentElement) {
+              otherTrail.parentElement.removeChild(otherTrail);
+            }
+          }, 160);
+        }, 160);
+      }
+    }
+  }
+}
+
 
         // 5) Leader updates (only in Non-boring)
         if (CONDITION.EXCITING) {
