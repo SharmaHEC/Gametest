@@ -444,46 +444,16 @@
 
     <!-- End screen -->
     <div id="screen-end" class="screen">
-      <h3>Thank you</h3>
-      <p id="end-message-main">
-        
-      </p>
+  <h3>Thank you</h3>
+  <p id="end-message-main"></p>
 
-      <!-- NEW: subjective ratings block -->
-      <div id="ratings-block">
-        <p style="margin-bottom:8px;">
-          Please answer below questions about your experience in this game. Also, please update the google sheet accordingly.
-        </p>
-
-        <div class="rating-item">
-          <div>By the end of you partcipation in this game, to what extent did you feel bored? 1 (Not at all) to 7 (Extremely) </div>
-          <div class="rating-scale" id="rating-boredom">
-            <!-- 1–7 radio buttons -->
-            <label><input type="radio" name="boredom" value="1"> 1 </label>
-            <label><input type="radio" name="boredom" value="2"> 2</label>
-            <label><input type="radio" name="boredom" value="3"> 3</label>
-            <label><input type="radio" name="boredom" value="4"> 4</label>
-            <label><input type="radio" name="boredom" value="5"> 5</label>
-            <label><input type="radio" name="boredom" value="6"> 6</label>
-            <label><input type="radio" name="boredom" value="7"> 7 </label>
-          </div>
-        </div>
-
-        <div class="rating-item">
-          <div>By the end of you partcipation in this game, to what extent did you feel you were missing out on something? 1 (Not at all) to 7 (Extremely)  </div>
-          <div class="rating-scale" id="rating-fomo">
-            <label><input type="radio" name="fomo_rating" value="1"> 1 </label>
-            <label><input type="radio" name="fomo_rating" value="2"> 2</label>
-            <label><input type="radio" name="fomo_rating" value="3"> 3</label>
-            <label><input type="radio" name="fomo_rating" value="4"> 4</label>
-            <label><input type="radio" name="fomo_rating" value="5"> 5</label>
-            <label><input type="radio" name="fomo_rating" value="6"> 6</label>
-            <label><input type="radio" name="fomo_rating" value="7"> 7 </label>
-          </div>
-        </div>
-      </div>
-    </div>
+  <div id="ratings-block">
+    <p style="margin-bottom:8px">
+      Please update the excel Sheet for this condition.
+    </p>
   </div>
+</div>
+
 
   <script>
     /***********************
@@ -1166,46 +1136,78 @@ if (!CONDITION.EXCITING && chosen) {
           h.pos = pos;
         }
 
-        // 2) Cheer surge effect (smaller in boring condition)
-        var chosen = horses.find(function(h) { return h.id === horseChosen; });
-        if (chosen) {
-          var cheerEffect = (CONDITION.EXCITING ?  0.80 : 0.15) * cheer.surge;
-          chosen.pos = Math.min(96, chosen.pos + cheerEffect);
-        }
+        // 2) Cheer surge effect
+var chosen = horses.find(function(h) { return h.id === horseChosen; });
+if (chosen) {
+  var cheerEffect = (CONDITION.EXCITING ? 0.80 : 0.15) * cheer.surge;
+  chosen.pos = Math.min(96, chosen.pos + cheerEffect);
+
+  // EXTRA: in Non-boring, make gains on two rivals
+  if (CONDITION.EXCITING && cheer.surge > 0.05) {
+    var others = horses.filter(function(h) { return h.id !== horseChosen; });
+    others.sort(function(a, b) { return b.pos - a.pos; });
+
+    var closeRival = others[0];          // stays near you
+    var rivalsToPush = others.slice(1);  // remaining horses
+
+    var weakenAmount = 0.20 * cheer.surge; // tune 0.10–0.30
+    for (var r = 0; r < rivalsToPush.length; r++) {
+      rivalsToPush[r].pos = Math.max(4, rivalsToPush[r].pos - weakenAmount);
+    }
+  }
+}
+
+
 
         // 3) Enforce chosen horse rank (1st or 2nd) with narrow margin
-        if (chosen) {
-          var others = horses.filter(function(h) { return h.id !== horseChosen; });
-          others.sort(function(a, b) { return b.pos - a.pos; });
+if (chosen) {
+  var others = horses.filter(function(h) { return h.id !== horseChosen; });
+  others.sort(function(a, b) { return b.pos - a.pos; });
 
-          if (others.length > 0) {
-            var leader = others[0];
-            var second = others.length > 1 ? others[1] : null;
-            var marginLead = 0.5;
-            var marginTrail = 0.4;
+  if (others.length > 0) {
+    var leader = others[0];
+    var second = others.length > 1 ? others[1] : null;
+    var marginLead = 0.5;
+    var marginTrail = 0.4;
 
-            var targetRank;
-            if (CONDITION.EXCITING) {
-              var pLeadBase = 0.3 + 0.7 * baseFracRaw;
-              var pLeadBoost = pLeadBase + 0.06 * cheer.surge;
-              var pLead = Math.min(0.98, pLeadBoost);
-              targetRank = Math.random() < pLead ? 1 : 2;
-            } else {
-              var pLeadBaseBoring = baseFracRaw < 0.6 ? 0.25 : 0.55;
-              var pLeadBoostBoring = pLeadBaseBoring + 0.025 * cheer.surge;
-              var pLeadBoring = Math.min(0.85, pLeadBoostBoring);
-              targetRank = Math.random() < pLeadBoring ? 1 : 2;
-            }
+    var targetRank;
+    if (CONDITION.EXCITING) {
+      var pLeadBase = 0.3 + 0.7 * baseFracRaw;
+      var pLeadBoost = pLeadBase + 0.06 * cheer.surge;
+      var pLead = Math.min(0.98, pLeadBoost);
+      targetRank = Math.random() < pLead ? 1 : 2;
+    } else {
+      // existing boring logic unchanged
+      var pLeadBaseBoring = baseFracRaw < 0.6 ? 0.25 : 0.55;
+      var pLeadBoostBoring = pLeadBaseBoring + 0.025 * cheer.surge;
+      var pLeadBoring = Math.min(0.85, pLeadBoostBoring);
+      targetRank = Math.random() < pLeadBoring ? 1 : 2;
+    }
 
-            if (targetRank === 1) {
-              chosen.pos = Math.min(96, leader.pos + marginLead);
-            } else {
-              var targetPos = leader.pos - marginTrail;
-              if (second && targetPos <= second.pos + 0.1) targetPos = second.pos + 0.1;
-              chosen.pos = Math.max(4, Math.min(96, targetPos));
-            }
-          }
+    if (targetRank === 1) {
+      chosen.pos = Math.min(96, leader.pos + marginLead);
+    } else {
+      var targetPos = leader.pos - marginTrail;
+      if (second && targetPos <= second.pos + 0.1) targetPos = second.pos + 0.1;
+      chosen.pos = Math.max(4, Math.min(96, targetPos));
+    }
+
+    // NEW: only in Non-boring, cap the gap to nearest rival
+    if (CONDITION.EXCITING) {
+      var nearestRival = others[0];
+      var maxGap = 2.0; // at most 2% track distance apart
+      var gap = Math.abs(chosen.pos - nearestRival.pos);
+      if (gap > maxGap) {
+        if (chosen.pos > nearestRival.pos) {
+          chosen.pos = nearestRival.pos + maxGap;
+        } else {
+          chosen.pos = nearestRival.pos - maxGap;
         }
+      }
+    }
+  }
+}
+
 
         // 4) Apply positions
         for (var j = 0; j < horses.length; j++) {
@@ -1402,47 +1404,38 @@ if (CONDITION.FOMO) {
      * FINISH & EXPORT     *
      ***********************/
     function finishAndExport() {
-      if (sessionEnded) return;
-      sessionEnded = true;
+  if (sessionEnded) return;
+  sessionEnded = true;
 
-      var boredomRating = getRatingValue("boredom");
-      var fomoRating = getRatingValue("fomo_rating");
+  logEvent("session_end", {
+    participantId: CONDITION.participantId,
+    FOMO: CONDITION.FOMO,
+    EXCITING: CONDITION.EXCITING,
+    horseChosen: horseChosen,
+    hasBonus: conditionHasLottery()
+  });
 
-      logEvent("session_end", {
-        participantId: CONDITION.participantId,
-        FOMO: CONDITION.FOMO,
-        EXCITING: CONDITION.EXCITING,
-        horseChosen: horseChosen,
-        hasBonus: conditionHasLottery(),
-        boredomRating: boredomRating,
-        fomoRating: fomoRating
-      });
+  var payload = {
+    participantId: CONDITION.participantId,
+    FOMO: CONDITION.FOMO,
+    EXCITING: CONDITION.EXCITING,
+    horseChosen: horseChosen,
+    hasBonus: conditionHasLottery(),
+    events: logEvents
+  };
 
-      var payload = {
-        participantId: CONDITION.participantId,
-        FOMO: CONDITION.FOMO,
-        EXCITING: CONDITION.EXCITING,
-        horseChosen: horseChosen,
-        hasBonus: conditionHasLottery(),
-        boredomRating: boredomRating,
-        fomoRating: fomoRating,
-        events: logEvents
-      };
-
-      try {
-        if (typeof window.qualtricsSetData === "function") {
-          window.qualtricsSetData("game_log_json", JSON.stringify(payload));
-          window.qualtricsSetData("fomo", CONDITION.FOMO ? 1 : 0);
-          window.qualtricsSetData("boredom", CONDITION.EXCITING ? 0 : 1);
-          window.qualtricsSetData("hasBonus", conditionHasLottery() ? 1 : 0);
-          window.qualtricsSetData("horseChosen", horseChosen || "");
-          window.qualtricsSetData("boredomRating", boredomRating || "");
-          window.qualtricsSetData("fomoRating", fomoRating || "");
-        }
-      } catch (e) {
-        // ignore
-      }
+  try {
+    if (typeof window.qualtricsSetData === "function") {
+      window.qualtricsSetData("gamelog_json", JSON.stringify(payload));
+      window.qualtricsSetData("fomo", CONDITION.FOMO ? 1 : 0);
+      window.qualtricsSetData("boredom", CONDITION.EXCITING ? 0 : 1);
+      window.qualtricsSetData("hasBonus", conditionHasLottery() ? 1 : 0);
+      window.qualtricsSetData("horseChosen", horseChosen);
+      // removed boredomRating / fomoRating since questions are gone
     }
+  } catch (e) { /* ignore */ }
+}
+
 
     /***********************
      * STARTUP             *
