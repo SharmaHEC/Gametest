@@ -308,17 +308,61 @@
       opacity: 0.75;
     }
     #race-track.exciting-mode .finish-line {
-      background-image: linear-gradient(
-        45deg,
-        #e5e7eb 25%,
-        transparent 25%,
-        transparent 50%,
-        #e5e7eb 50%,
-        #e5e7eb 75%,
-        transparent 75%,
-        transparent
-      );
-      opacity: 0.9;
+      width: 28px;
+      right: 2px;
+      background-image:
+        linear-gradient(to right,
+          rgba(0,0,0,0) 0%,
+          rgba(0,0,0,0.10) 100%
+        ),
+        repeating-conic-gradient(
+          #fff 0% 25%, #111 25% 50%
+        );
+      background-size: 28px 260px, 14px 14px;
+      opacity: 1;
+      border-left: 2px solid #fbbf24;
+      border-right: 2px solid #fbbf24;
+      box-shadow:
+        -4px 0 18px 4px rgba(251, 191, 36, 0.45),
+         4px 0 18px 4px rgba(251, 191, 36, 0.45),
+         0 0 8px 2px rgba(251, 191, 36, 0.25);
+      z-index: 3;
+      animation: finishGlow 1.5s ease-in-out infinite alternate;
+    }
+    @keyframes finishGlow {
+      from { box-shadow: -4px 0 14px 3px rgba(251,191,36,0.35), 4px 0 14px 3px rgba(251,191,36,0.35), 0 0 6px 2px rgba(251,191,36,0.2); }
+      to   { box-shadow: -4px 0 24px 6px rgba(251,191,36,0.6), 4px 0 24px 6px rgba(251,191,36,0.6), 0 0 12px 4px rgba(251,191,36,0.4); }
+    }
+    /* Pulsing glow integrated into the finish-line element itself */
+    /* FINISH flag labels — top and bottom */
+    #race-track.exciting-mode .finish-line::after {
+      content: "\1F3C1";
+      position: absolute;
+      top: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 18px;
+      line-height: 1;
+      filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.8));
+      pointer-events: none;
+      animation: flagWave 0.8s ease-in-out infinite alternate;
+    }
+    #race-track.exciting-mode .finish-line::before {
+      content: "\1F3C1";
+      position: absolute;
+      bottom: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 18px;
+      line-height: 1;
+      filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.8));
+      pointer-events: none;
+      animation: flagWave 0.8s ease-in-out infinite alternate;
+      box-shadow: none;
+    }
+    @keyframes flagWave {
+      from { transform: translateX(-50%) rotate(-5deg); }
+      to   { transform: translateX(-50%) rotate(5deg); }
     }
 
     #fomo-overlay {
@@ -336,6 +380,46 @@
       z-index: 10;
     }
     #fomo-overlay.hidden { display: none; }
+
+    /* Leaderboard styles */
+    .leaderboard-table {
+      width: 100%;
+      max-width: 400px;
+      margin: 12px auto;
+      border-collapse: separate;
+      border-spacing: 0 6px;
+    }
+    .leaderboard-table th {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6b7280;
+      padding: 4px 12px;
+      text-align: left;
+    }
+    .leaderboard-table th:first-child { text-align: center; }
+    .leaderboard-row {
+      border-radius: 8px;
+    }
+    .leaderboard-row td {
+      padding: 10px 12px;
+      font-weight: 600;
+      font-size: 15px;
+      background: #f3f4f6;
+    }
+    .leaderboard-row td:first-child {
+      border-radius: 8px 0 0 8px;
+      text-align: center;
+      width: 50px;
+    }
+    .leaderboard-row td:last-child {
+      border-radius: 0 8px 8px 0;
+    }
+    .leaderboard-row.rank-1 td { background: #fef3c7; }
+    .leaderboard-row.rank-2 td { background: #f1f5f9; }
+    .leaderboard-row.rank-3 td { background: #fff7ed; }
+    .leaderboard-row.is-you td { border: 2px solid #2563eb; }
+    .rank-medal { font-size: 20px; }
 
     /* Commentary/status feed */
     #status-feed {
@@ -501,6 +585,80 @@
       cursor: pointer;
     }
 
+    /* Podium layout for Non-FoMO + Non-boring result */
+    .podium-container {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 8px;
+      margin: 20px auto 12px;
+      max-width: 420px;
+    }
+    .podium-col {
+      flex: 1;
+      text-align: center;
+      border-radius: 10px;
+      padding: 14px 6px 12px;
+      position: relative;
+    }
+    /* Winner (middle) — tallest */
+    .podium-col.podium-1 {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 2px solid #f59e0b;
+      min-height: 150px;
+      order: 2;
+    }
+    /* Rank 2 (left) */
+    .podium-col.podium-2 {
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+      border: 2px solid #94a3b8;
+      min-height: 120px;
+      order: 1;
+    }
+    /* Rank 3 (right) */
+    .podium-col.podium-3 {
+      background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+      border: 2px solid #d97706;
+      min-height: 100px;
+      order: 3;
+    }
+    .podium-medal {
+      font-size: 32px;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .podium-rank {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+    .podium-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .podium-col.podium-1 .podium-name {
+      color: #92400e;
+      font-size: 17px;
+    }
+    .podium-col.podium-1 .podium-rank {
+      color: #92400e;
+    }
+    .podium-you-tag {
+      display: inline-block;
+      background: #2563eb;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      margin-top: 6px;
+      letter-spacing: 0.3px;
+    }
+
     /* Lead change flash overlay */
     .lead-flash {
       position: absolute;
@@ -615,6 +773,7 @@
     <div id="screen-end" class="screen">
       <h3>Thank you</h3>
       <p id="end-message-main"></p>
+      <div id="leaderboard" style="display:none;"></div>
       <div id="ratings-block">
         <p style="margin-bottom:8px">
           Please update the excel Sheet for this condition.
@@ -1440,7 +1599,7 @@
         var horse = document.createElement("div");
         horse.className = "horse";
         horse.classList.add("exciting");   // always use circular emoji style
-        horse.textContent = "\uD83D\uDC0E";
+        horse.textContent = "\uD83C\uDFC7";
 
         if (horseId === horseChosen) horse.classList.add("chosen");
 
@@ -1807,6 +1966,53 @@
       return null;
     }
 
+    function buildLeaderboardHTML() {
+      // Sort non-player horses by position descending
+      var playerHorse = null;
+      var others = [];
+      for (var i = 0; i < horses.length; i++) {
+        if (horses[i].id === horseChosen) playerHorse = horses[i];
+        else others.push(horses[i]);
+      }
+      others.sort(function(a, b) { return b.pos - a.pos; });
+
+      // Player's horse WINS (rank 1), others fill rank 2 and 3
+      var podium = [];
+      // Rank 1 = player
+      if (playerHorse) {
+        podium.push({ rank: 1, name: "You", isYou: true });
+      }
+      // Rank 2 = top other horse
+      if (others.length >= 1) {
+        podium.push({ rank: 2, name: others[0].actorLabel, isYou: false });
+      }
+      // Rank 3 = second other horse
+      if (others.length >= 2) {
+        podium.push({ rank: 3, name: others[1].actorLabel, isYou: false });
+      }
+
+      var medals = ["\uD83E\uDD47", "\uD83E\uDD48", "\uD83E\uDD49"]; // gold, silver, bronze
+      var rankLabels = ["1st Place", "2nd Place", "3rd Place"];
+
+      // 3-column podium: Rank2 (left) | Winner (middle) | Rank3 (right)
+      var html = '<div class="podium-container">';
+      for (var j = 0; j < podium.length; j++) {
+        var p = podium[j];
+        var medal = medals[p.rank - 1] || "";
+        var label = rankLabels[p.rank - 1] || "";
+        html += '<div class="podium-col podium-' + p.rank + '">';
+        html += '<span class="podium-medal">' + medal + '</span>';
+        html += '<div class="podium-rank">' + label + '</div>';
+        html += '<div class="podium-name">' + p.name + '</div>';
+        if (p.isYou) {
+          html += '<span class="podium-you-tag">YOUR HORSE</span>';
+        }
+        html += '</div>';
+      }
+      html += '</div>';
+      return html;
+    }
+
     function endRace(reason) {
       if (raceEnded) return;
       raceEnded = true;
@@ -1824,19 +2030,26 @@
       logEvent("race_end", { reason: reason, winner: winnerId, leadChanges: leadChangeCount });
 
       var endMsgEl = el("end-message-main");
+      var lbEl = el("leaderboard");
+      if (lbEl) lbEl.style.display = "none";
+
       if (endMsgEl) {
-        if (!CONDITION.FOMO && winnerId != null) {
+        if (!CONDITION.FOMO) {
           if (CONDITION.EXCITING) {
-            endMsgEl.innerHTML =
-              '<span style="font-weight:bold;color:#b91c1c;">Horse ' +
-              winnerId + ' is the winner!</span>';
+            // Non-FoMO + Non-boring: show podium with player's horse as winner
+            endMsgEl.innerHTML = '<span style="font-weight:bold;color:#16a34a;">Your horse won!</span>';
+            if (lbEl) {
+              lbEl.style.display = "block";
+              lbEl.innerHTML = buildLeaderboardHTML();
+            }
           } else {
-            endMsgEl.textContent =
-              "Thank you for playing the game.";
+            // Non-FoMO + Boring: just say the horse won
+            endMsgEl.innerHTML =
+              '<span style="font-weight:bold;color:#16a34a;">Your horse won!</span>';
           }
         } else {
           endMsgEl.textContent =
-            "You participation in the game is now over";
+            "Your participation in the game is now over.";
         }
       }
 
