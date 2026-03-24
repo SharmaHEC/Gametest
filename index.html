@@ -187,6 +187,60 @@
       box-shadow: 0 0 14px rgba(34, 197, 94, 0.95);
     }
 
+/* ===== SLIPPERY TRACK VISUAL ===== */
+#race-track.slippery {
+  background: linear-gradient(120deg, #0f172a 0%, #1e293b 40%, #020617 100%);
+  filter: brightness(0.85) contrast(1.2);
+}
+
+#race-track.slippery::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(148,163,184,0.15) 0px,
+    rgba(148,163,184,0.15) 6px,
+    transparent 6px,
+    transparent 14px
+  );
+  animation: slipperyMove 2s linear infinite;
+}
+
+@keyframes slipperyMove {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-40px); }
+}
+
+/* Slippery badge — positioned near finish line */
+#slippery-badge {
+  position: absolute;
+  top: 10px;
+
+  /* Move to the right side (finish line area) */
+  right: 12px;
+  left: auto;
+
+  transform: none;
+
+  background: #38bdf8;
+  color: #020617;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  z-index: 6;
+
+  box-shadow: 0 0 10px rgba(56,189,248,0.7);
+  animation: badgePulseRight 0.8s infinite alternate;
+}
+
+@keyframes badgePulseRight {
+  from { transform: scale(1); }
+  to   { transform: scale(1.08); }
+}
+
     /* Position badge on horse */
     .pos-badge {
       position: absolute;
@@ -979,6 +1033,43 @@
       o.start(now);
       o.stop(now + 0.22);
     }
+function handleSlipperyTrack(elapsedMs) {
+  if (!CONDITION.EXCITING) return;
+
+  var track = el("race-track");
+
+  // Activate between 60s–120s
+  if (elapsedMs >= 60000 && elapsedMs <= 120000) {
+
+    if (!slipperyTrackActive) {
+      slipperyTrackActive = true;
+      slipperyStartTime = performance.now();
+
+      track.classList.add("slippery");
+
+      // Badge
+      var badge = document.createElement("div");
+      badge.id = "slippery-badge";
+      badge.textContent = "🌧️ Slippery track!";
+      track.appendChild(badge);
+
+      showCommentary("slipperyTrack", null, true);
+      logEvent("slippery_start");
+    }
+
+  } else {
+    if (slipperyTrackActive) {
+      slipperyTrackActive = false;
+
+      track.classList.remove("slippery");
+
+      var badge = el("slippery-badge");
+      if (badge) badge.remove();
+
+      logEvent("slippery_end");
+    }
+  }
+}
 
     /* NEW: Crowd roar burst on lead changes */
     function playCrowdRoar() {
@@ -1156,48 +1247,59 @@
      * COMMENTARY SYSTEM   *
      ***********************/
     var commentaryPool = {
-      playerLeading: [
-        "Your horse surges ahead!",
-        "You're in the lead — hold on tight!",
-        "Incredible pace from your horse!",
-        "Your horse is flying!",
-        "The crowd is cheering — you're leading!",
-        "What a run! Your horse takes the lead!",
-        "Your horse breaks away from the pack!"
-      ],
-      rivalLeading: [
-        "{rival} takes the lead!",
-        "{rival} pushes ahead!",
-        "{rival}'s horse is making a move!",
-        "Watch out — {rival} is overtaking!",
-        "{rival} pulls into first place!",
-        "The lead changes hands — {rival} is ahead!"
-      ],
-      closeRace: [
-        "It's neck and neck!",
-        "This race is incredibly close!",
-        "Just a hair separates the leaders!",
-        "What a tight battle at the front!",
-        "The top two are nearly side by side!",
-        "Nobody is giving an inch!",
-        "The crowd is on their feet!"
-      ],
-      finalStretch: [
-        "They're approaching the final stretch!",
-        "The finish line is in sight!",
-        "It all comes down to this!",
-        "Last chance to make a move!",
-        "The race is entering its climax!",
-        "Who will take it? The finish is near!"
-      ],
-      cheerReaction: [
-        "The crowd goes wild!",
-        "Listen to that roar!",
-        "Your cheering is making a difference!",
-        "The energy is electric!",
-        "That cheer gave a real boost!"
-      ]
-    };
+  playerLeading: [
+    "🔥 Your horse EXPLODES into the lead!",
+    "🚀 You're DOMINATING the race right now!",
+    "💥 What a surge — your horse is UNSTOPPABLE!",
+    "⚡ Incredible acceleration — you're leaving everyone behind!",
+    "👑 You're leading — the crowd is going WILD!",
+    "🎯 Perfect timing — your horse takes CONTROL!",
+    "🏆 You're pulling away — this is YOUR race!"
+  ],
+slipperyTrack: [
+  "🌧️ Track Gets Slippery! Horses are losing grip!",
+  "💦 The track is muddy — control is slipping!",
+  "⚠️ Slippery conditions — anything can happen!",
+  "🌪️ Chaos on the track — balance is key!",
+  "😱 Even the leaders are struggling!",
+  "💥 Sudden loss of traction — positions may change!",
+  "🌧️ Tough track - Horses are slipping!"
+],
+  rivalLeading: [
+    "😱 {rival} just SNATCHED the lead!",
+    "⚠️ {rival} is charging ahead FAST!",
+    "💨 {rival}'s horse is on FIRE!",
+    "🔥 {rival} just overtook you — fight back!",
+    "👀 {rival} is dominating the front now!",
+    "⚡ Lead change! {rival} is pushing HARD!",
+    "🚨 {rival} takes control — can you respond?"
+  ],
+  closeRace: [
+    "😮 It's an ALL-OUT sprint!",
+    "🔥 This is insanely CLOSE!",
+    "⚡ Neck and neck — no one backing down!",
+    "💥 The leaders are battling HARD!",
+    "🎢 This race could go ANY way!",
+    "😤 Pure intensity — nobody gives an inch!",
+    "👀 You can FEEL the tension!"
+  ],
+  finalStretch: [
+    "🚨 FINAL STRETCH — EVERYTHING ON THE LINE!",
+    "🏁 This is it — NOW OR NEVER!",
+    "🔥 Last chance — PUSH YOUR HORSE!",
+    "⚡ The finish line is RIGHT THERE!",
+    "💥 All or nothing — GO GO GO!",
+    "🎯 This decides EVERYTHING!",
+    "🚀 FULL SPEED TO THE FINISH!"
+  ],
+  cheerReaction: [
+    "📣 MASSIVE cheer — your horse RESPONDS!",
+    "🔥 The crowd ERUPTS — what a boost!",
+    "⚡ That cheer gave serious MOMENTUM!",
+    "💥 Energy spike — your horse surges forward!",
+    "🎉 The stadium ROARS — keep it going!"
+  ]
+};
     var lastCommentaryType = "";
 
     function getCommentary(type, data) {
@@ -1238,6 +1340,7 @@
     var raceEnded = false;
     var raceStartPerfTime = null;
 
+
     var RACE_TOTAL_MS = null;
     var FOMO_INTERRUPT_MS = null;
 
@@ -1245,6 +1348,13 @@
     var LEADER_UPDATE_INTERVAL_MS = 2000;
     var lastLeaderId = null;        // track lead changes
     var leadChangeCount = 0;
+/***********************
+ * SLIPPERY TRACK STATE *
+ ***********************/
+var slipperyTrackActive = false;
+var slipperyStartTime = 0;
+var slipperyDuration = 0;
+var slipperyTriggered = false;
 
     var cheer = {
       stamina: 1.0,
@@ -1657,6 +1767,20 @@
 
         var now = performance.now();
         var elapsed = now - raceStartPerfTime;
+handleSlipperyTrack(elapsed);
+// Trigger slippery track ONLY in exciting conditions
+if (CONDITION.EXCITING && !slipperyTriggered && elapsed > 30000) {
+  if (Math.random() < 0.6) {
+    slipperyTrackActive = true;
+    slipperyTriggered = true;
+    slipperyStartTime = now;
+
+    // 1–2 minutes duration
+    slipperyDuration = 60000 + Math.random() * 60000;
+
+    showCommentary("slipperyTrack", null, true);
+  }
+}
         if (elapsed < 0) elapsed = 0;
         if (RACE_TOTAL_MS === null) return;
 
@@ -1702,6 +1826,24 @@
           if (pos > 96) pos = 96;
           h.pos = pos;
         }
+
+// Slippery track effect
+var slipperyFactor = 0;
+
+if (slipperyTrackActive) {
+  // randomness
+  slipperyFactor = (Math.random() - 0.5) * 1.2;
+
+  // occasional slips
+  if (Math.random() < 0.08) {
+    h.speed *= 0.7;
+  }
+
+  // commentary bursts
+  if (Math.random() < 0.02) {
+    showCommentary("slipperyTrack", null, false);
+  }
+}
 
         // 2) Cheer surge effect
         var chosen = horses.find(function(h) { return h.id === horseChosen; });
@@ -1787,6 +1929,22 @@
             }
           }
         }
+
+
+var boost = 0;
+
+// Keep chosen horse slightly advantaged
+if (h.id === horseChosen && slipperyTrackActive) {
+  boost = 0.08;
+}
+
+var movement =
+  h.speed * varScale * (0.6 + midShape * 1.2) +
+  cheer.surge +
+  slipperyFactor +
+  boost;
+
+h.pos += movement;
 
         // 5) Leader updates & exciting enhancements
         if (CONDITION.EXCITING) {
